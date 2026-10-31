@@ -41,5 +41,8 @@ small_z_index = find_small_z_index(redshifts)
 distances_small_z = calculate_distance_small_z(redshifts[small_z_index:])  # meters
 fluxes_small_z = calculate_effective_flux(m_effectives[small_z_index:])  # erg/s/cm^2/Å
 
-plt.plot(distances_small_z, fluxes_small_z, 'o')
-plt.savefig("flux_vs_distance.png")
+plt.errorbar(redshifts[small_z_index:], m_effectives[small_z_index:], yerr=errs[small_z_index:], fmt='x', color='black', capsize=2, markeredgewidth=1)
+plt.xlabel("Redshift")
+plt.ylabel("Effective Magnitude")
+plt.title("Effective Magnitude vs. Redshift")
+plt.savefig("m_against_z.png")
