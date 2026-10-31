@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-file_name = "sn_data(1).txt"
+file_name = "sn_data.txt"
 try:
     redshifts, m_effectives, errs = np.loadtxt(file_name, unpack=True, usecols=(1, 2, 3))
 except FileNotFoundError:
