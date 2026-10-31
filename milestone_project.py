@@ -24,7 +24,7 @@ def read_data(file_name) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 # function to calculate distance from redshift using approximation for small redshifts
 def calculate_distance_small_z(redshifts: np.ndarray) -> np.ndarray:
-    return (SPEED_OF_LIGHT / H0) * redshifts
+    return (SPEED_OF_LIGHT / H0_HZ) * redshifts
 
 # function to find the index of the first redshift less than SMALL_Z_THRESHOLD (8.4.2)
 # ONLY WORKS FOR ORDERED LISTS
@@ -38,12 +38,11 @@ def find_small_z_index(redshifts: np.ndarray) -> int:
 def calculate_effective_flux(m_effectives: np.ndarray) -> np.ndarray:
     return F_LAMBDA_0 * 10 ** (-m_effectives / 2.5)
 
-# straight line model
+# model for relation between redshift and effective magnitude for small redshifts
 def model_function(redshifts: np.ndarray, *params) -> np.ndarray:
-    numerator = params[0] * H0_HZ**2
-    denominator = 4 * np.pi * SPEED_OF_LIGHT**2 * F_LAMBDA_0 * (1 + redshifts)
-    operand = numerator / denominator
-    m_effectives = -2.5 * np.log10(operand)
+    distances = calculate_distance_small_z(redshifts)
+    fluxes = params[0] / (4 * np.pi * distances ** 2)
+    m_effectives = -2.5 * np.log10((1 + redshifts) * fluxes / F_LAMBDA_0)
     return m_effectives
 
 # function to optimise a model
@@ -66,23 +65,24 @@ distances_small_z = calculate_distance_small_z(redshifts[small_z_index:])  # met
 fluxes_small_z = calculate_effective_flux(m_effectives[small_z_index:])  # erg/s/cm^2/Å
 
 popt, pcov = optimise_model(redshifts[small_z_index:], m_effectives[small_z_index:], errs[small_z_index:], model_function)
-
+plt.figure(figsize=(10, 6))
 plt.errorbar(redshifts[small_z_index:], m_effectives[small_z_index:], 
              yerr=errs[small_z_index:], fmt='x', color='black', 
              capsize=2, markeredgewidth=1)
 
-smooth_x = np.linspace(redshifts[small_z_index:], redshifts[-1], 1000)
+smooth_x = np.linspace(np.min(redshifts[small_z_index:]), np.max(redshifts[small_z_index:]), 1000)
 plt.plot(smooth_x, 
          model_function(smooth_x , popt), 
-         color='r')
+         color='r',
+         label = rf"Optimised Model: $L_{{\mathrm{{peak}}}}$ = {popt[0]:.2e} W")
 
-# plt.errorbar(redshifts, m_effectives, 
-#              yerr=errs, fmt='x', color='black', 
-#              capsize=2, markeredgewidth=1)
-plt.xlabel("Redshift")
+plt.legend(loc="best")
 plt.ylabel("Effective Magnitude")
+plt.xlabel("Redshift Factor")
 plt.title("Effective Magnitude vs. Redshift")
 plt.savefig("m_against_z.png")
+plt.show()
+
 chi_squared = return_chi_squared(redshifts[small_z_index:], m_effectives[small_z_index:], errs[small_z_index:], popt)
 print(f"Chi-squared: {chi_squared}")
 degrees_of_freedom = len(redshifts[small_z_index:]) - len(popt)
