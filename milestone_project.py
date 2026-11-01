@@ -26,71 +26,69 @@ def read_data(file_name) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 def calculate_distance_small_z(redshifts: np.ndarray) -> np.ndarray:
     return (SPEED_OF_LIGHT / H0_HZ) * redshifts
 
-# function to find the index of the first redshift less than SMALL_Z_THRESHOLD (8.4.2)
-# ONLY WORKS FOR ORDERED LISTS
-def find_small_z_index(redshifts: np.ndarray) -> int:
-    for i, z in enumerate(redshifts):
-        if z < SMALL_Z_THRESHOLD:
-            return i
-    return len(redshifts)  # all redshifts are greater than or equal to SMALL_Z_THRESHOLD
-
 # function to calculate effective flux from effective magnitudes (8.19)
 def calculate_effective_flux(m_effectives: np.ndarray) -> np.ndarray:
     return F_LAMBDA_0 * 10 ** (-m_effectives / 2.5)
 
 # model for relation between redshift and effective magnitude for small redshifts
-def model_function(redshifts: np.ndarray, *params) -> np.ndarray:
+def small_z_model_function(redshifts: np.ndarray, *params) -> np.ndarray:
     distances = calculate_distance_small_z(redshifts)
     fluxes = params[0] / (4 * np.pi * distances ** 2)
     m_effectives = -2.5 * np.log10((1 + redshifts) * fluxes / F_LAMBDA_0)
     return m_effectives
 
 # function to optimise a model
-def optimise_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, func: Callable) -> tuple[np.ndarray, np.ndarray]:
-    initial_guess = [3e40]  # initial guess for parameters
+def optimise_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, func: Callable, initial_guess: list) -> tuple[np.ndarray, np.ndarray]:
     popt, pcov = sp.optimize.curve_fit(func, redshifts, m_effectives, sigma=errs, p0=initial_guess)
     return popt, pcov
 
 # function to calculate chi-squared value
 def return_chi_squared(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, popt: np.ndarray) -> float:
-    residuals = m_effectives - model_function(redshifts, *popt)
+    residuals = m_effectives - small_z_model_function(redshifts, *popt)
     chi_squared = np.sum((residuals / errs) ** 2)
     return chi_squared
 
-redshifts, m_effectives, errs = read_data(FILE_NAME)  # all unitless
+def plot_small_z_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, *popt: np.ndarray, funct: Callable) -> None:
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(redshifts, m_effectives, 
+                 yerr=errs, fmt='x', color='black', 
+                 capsize=2, markeredgewidth=1)
 
-small_z_index = find_small_z_index(redshifts)
-print(f"Index of first redshift less than {SMALL_Z_THRESHOLD}: {small_z_index}")
+    smooth_x = np.linspace(np.min(redshifts), np.max(redshifts), 1000)
+    plt.plot(smooth_x, 
+             funct(smooth_x , *popt), 
+             color='r',
+             label = rf"Optimised Model: $L_{{\mathrm{{peak}}}}$ = {popt[0]:.2e} W")
 
-distances_small_z = calculate_distance_small_z(redshifts[small_z_index:])  # meters
-fluxes_small_z = calculate_effective_flux(m_effectives[small_z_index:])  # erg/s/cm^2/Å
+    plt.legend(loc="best")
+    plt.ylabel("Effective Magnitude")
+    plt.xlabel("Redshift Factor")
+    plt.title("Effective Magnitude vs. Redshift")
+    plt.savefig("m_against_z.png")
+    plt.show()
 
-popt, cov = optimise_model(redshifts[small_z_index:], m_effectives[small_z_index:], errs[small_z_index:], model_function)
-plt.figure(figsize=(10, 6))
-plt.errorbar(redshifts[small_z_index:], m_effectives[small_z_index:], 
-             yerr=errs[small_z_index:], fmt='x', color='black', 
-             capsize=2, markeredgewidth=1)
+def main()-> None:
+    redshifts, m_effectives, errs = read_data(FILE_NAME)  # all unitless
+    small_z = redshifts < SMALL_Z_THRESHOLD
+    redshifts_small, m_effectives_small, errs_small = redshifts[small_z], m_effectives[small_z], errs[small_z]
 
-smooth_x = np.linspace(np.min(redshifts[small_z_index:]), np.max(redshifts[small_z_index:]), 1000)
-plt.plot(smooth_x, 
-         model_function(smooth_x , *popt), 
-         color='r',
-         label = rf"Optimised Model: $L_{{\mathrm{{peak}}}}$ = {popt[0]:.2e} W")
+    distances_small_z = calculate_distance_small_z(redshifts_small)  # meters
+    fluxes_small_z = calculate_effective_flux(m_effectives_small)  # erg/s/cm^2/Å
 
-plt.legend(loc="best")
-plt.ylabel("Effective Magnitude")
-plt.xlabel("Redshift Factor")
-plt.title("Effective Magnitude vs. Redshift")
-plt.savefig("m_against_z.png")
-plt.show()
+    popt, cov = optimise_model(redshifts_small, m_effectives_small, errs_small, small_z_model_function, initial_guess=[3e40])
 
-L_peak = popt[0]
-err_L_peak = np.sqrt(np.diag(cov))[0]
+    plot_small_z_model(redshifts_small, m_effectives_small, errs_small, *popt, funct=small_z_model_function)
 
-chi_squared = return_chi_squared(redshifts[small_z_index:], m_effectives[small_z_index:], errs[small_z_index:], popt)
-degrees_of_freedom = len(redshifts[small_z_index:]) - len(popt)
-reduced_chi_squared = chi_squared / degrees_of_freedom
+    L_peak = popt[0]
+    err_L_peak = np.sqrt(np.diag(cov))[0]
 
-print(f"Chi-squared: {chi_squared}")
-print(f"Reduced Chi-squared: {reduced_chi_squared}")
-print(f"L_peak: {L_peak:.2e} ± {err_L_peak:.2e} W")
+    chi_squared = return_chi_squared(redshifts_small, m_effectives_small, errs_small, popt)
+    degrees_of_freedom = len(redshifts_small) - len(popt)
+    reduced_chi_squared = chi_squared / degrees_of_freedom
+
+    print(f"Chi-squared: {chi_squared}")
+    print(f"Reduced Chi-squared: {reduced_chi_squared}")
+    print(f"L_peak: {L_peak:.2e} ± {err_L_peak:.2e} W")
+
+if __name__ == "__main__":
+    main()
