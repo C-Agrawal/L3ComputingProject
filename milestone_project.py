@@ -32,7 +32,8 @@ def calculate_distance_small_z(redshifts: np.ndarray) -> np.ndarray:
 
 def distance_intergrand(scale_factors: np.ndarray, omega_Lambda: float) -> np.ndarray:
     omega_m = 1 - omega_Lambda
-    return 1 / (scale_factors * np.sqrt(omega_m / scale_factors ** 3 + omega_Lambda))
+    operand = omega_m * scale_factors + omega_Lambda * scale_factors ** 4 + (1 - omega_m - omega_Lambda) * scale_factors ** 2
+    return 1 / (np.sqrt(operand))
     
 
 def calculate_distance(redshifts: np.ndarray, omega_Lambda: float) -> np.ndarray:
@@ -56,7 +57,7 @@ def small_z_model_function(redshifts: np.ndarray, *params: np.ndarray) -> np.nda
 
 def all_z_model_function(redshifts: np.ndarray, omega_Lambda: float, L_lambda_peak: float) -> np.ndarray:
     distances = calculate_distance(redshifts, omega_Lambda=omega_Lambda)  # cm
-    fluxes = L_lambda_peak / (4 * np.pi * distances ** 2)
+    fluxes = L_lambda_peak / (4 * np.pi * distances ** 2 * (1+redshifts)**2)
     m_effectives = -2.5 * np.log10((1 + redshifts) * fluxes / F_LAMBDA_0)
     return m_effectives
 
@@ -94,7 +95,7 @@ def plot_all_z_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.n
 
     smooth_x = np.linspace(np.min(redshifts), np.max(redshifts), 1000)
     plt.plot(smooth_x, 
-                funct(smooth_x ,omega_Lambda=0, L_lambda_peak=L_lambda_peak), 
+                funct(smooth_x ,omega_Lambda, L_lambda_peak), 
                 color='b',
                 label = rf"Optimised Model: $\Omega_{{\mathrm{{\Lambda}}}}$ = {omega_Lambda:.2f}")
 
