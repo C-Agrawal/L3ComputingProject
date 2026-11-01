@@ -12,7 +12,7 @@ H0 = 75  # km/s/Mpc
 SPEED_OF_LIGHT = 3e10  # cm/s
 KM_PER_MPC = 3.0857e19  # km/Mpc
 H0_HZ = H0 / KM_PER_MPC  # Hz
-SMALL_Z_THRESHOLD = 0.11  # threshold for small redshift approximation
+SMALL_Z_THRESHOLD = 0.1  # threshold for small redshift approximation
 F_LAMBDA_0 = 6.61e-9  # erg/s/cm^2/Å
 
 
@@ -80,8 +80,8 @@ def main()-> None:
 
     plot_small_z_model(redshifts_small, m_effectives_small, errs_small, *popt, funct=small_z_model_function)
 
-    L_lambda_peak = popt[0]
-    err_L_lambda_peak = np.sqrt(np.diag(cov))[0]
+    L_lambda_peak = popt[0]  # ergs/s/Å
+    err_L_lambda_peak = np.sqrt(np.diag(cov))[0]  # ergs/s/Å
 
     chi_squared = return_chi_squared(redshifts_small, m_effectives_small, errs_small, popt)
     degrees_of_freedom = len(redshifts_small) - len(popt)
@@ -89,7 +89,7 @@ def main()-> None:
 
     print(f"Chi-squared: {chi_squared}")
     print(f"Reduced Chi-squared: {reduced_chi_squared}")
-    print(f"L__lambda_peak: {L_lambda_peak:.2e} ± {err_L_lambda_peak:.2e} ergs/s/Å")
+    print(f"L_lambda_peak: {L_lambda_peak:.2e} ± {err_L_lambda_peak:.2e} ergs/s/Å")
 
 if __name__ == "__main__":
     main()
