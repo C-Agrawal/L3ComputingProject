@@ -39,19 +39,15 @@ def distance_intergrand(scale_factors: np.ndarray, omega_Lambda: float) -> np.nd
 def calculate_distance(redshifts: np.ndarray, omega_Lambda: float) -> np.ndarray:
     coeff = SPEED_OF_LIGHT / H0_HZ
     scale_factors = 1 / (1 + redshifts)
-    sample_points = np.linspace(scale_factors, 1, 201, axis=-1)  # 201 sample points for integration
+    sample_points = np.linspace(scale_factors, 1, 1001, axis=-1)  # 1001 sample points for integration
     integrand_values = distance_intergrand(sample_points, omega_Lambda)
     integrals = integrate.simpson(integrand_values, sample_points, axis=-1)
     return coeff * integrals
 
-# function to calculate effective flux from effective magnitudes (8.19)
-def calculate_effective_flux(m_effectives: np.ndarray) -> np.ndarray:
-    return F_LAMBDA_0 * 10 ** (-m_effectives / 2.5)
-
 # model for relation between redshift and effective magnitude for small redshifts
-def small_z_model_function(redshifts: np.ndarray, *params: np.ndarray) -> np.ndarray:
+def small_z_model_function(redshifts: np.ndarray, L_lambda_peak: float) -> np.ndarray:
     distances = calculate_distance_small_z(redshifts)  # cm
-    fluxes = params[0] / (4 * np.pi * distances ** 2)
+    fluxes = L_lambda_peak / (4 * np.pi * distances ** 2)
     m_effectives = -2.5 * np.log10((1 + redshifts) * fluxes / F_LAMBDA_0)
     return m_effectives
 
@@ -62,10 +58,25 @@ def all_z_model_function(redshifts: np.ndarray, omega_Lambda: float, L_lambda_pe
     return m_effectives
 
 # function to calculate chi-squared value
-def return_chi_squared(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, L_lambda_peak: float) -> float:
+def small_z_return_chi_squared(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, L_lambda_peak: float) -> float:
     residuals = m_effectives - small_z_model_function(redshifts, L_lambda_peak)
     chi_squared = np.sum((residuals / errs) ** 2)
     return chi_squared
+
+def all_z_return_chi_squared(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, omega_Lambda: float, L_lambda_peak: float) -> float:
+    residuals = m_effectives - all_z_model_function(redshifts, omega_Lambda, L_lambda_peak)
+    chi_squared = np.sum((residuals / errs) ** 2)
+    return chi_squared
+
+def display_result(redshifts: np.ndarray, popt: np.ndarray, result: float, error: float, chi_squared: float, unit: str, result_name: str) -> float:
+    degrees_of_freedom = len(redshifts) - len(popt)
+    reduced_chi_squared = chi_squared / degrees_of_freedom
+
+    print(f"Optimised {result_name}: {result:.4e} ± {error:.4e} {unit}")
+    print(f"Chi-squared: {chi_squared}")
+    print(f"Reduced Chi-squared: {reduced_chi_squared}")
+    
+    return reduced_chi_squared
 
 def plot_small_z_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, L_lambda_peak: float, funct: Callable) -> None:
     plt.figure(figsize=(10, 6))
@@ -116,27 +127,27 @@ def main()-> None:
     initial_guess = [3e40]  # initial guess for L_lambda_peak
     popt, cov = optimize.curve_fit(small_z_model_function, redshifts_small, m_effectives_small, sigma=errs_small, p0=initial_guess, bounds=bounds)
 
-    plot_small_z_model(redshifts_small, m_effectives_small, errs_small, popt[0], funct=small_z_model_function)
-
+    
     L_lambda_peak = popt[0]  # ergs/s/Å
     err_L_lambda_peak = np.sqrt(np.diag(cov))[0]  # ergs/s/Å
 
-    chi_squared = return_chi_squared(redshifts_small, m_effectives_small, errs_small, popt[0])
-    degrees_of_freedom = len(redshifts_small) - len(popt)
-    reduced_chi_squared = chi_squared / degrees_of_freedom
+    chi_squared = small_z_return_chi_squared(redshifts_small, m_effectives_small, errs_small, popt[0])
+    display_result(redshifts_small, popt, L_lambda_peak, err_L_lambda_peak, chi_squared, "ergs/s/Å", "L_λ_peak")
 
-    print(f"Chi-squared: {chi_squared}")
-    print(f"Reduced Chi-squared: {reduced_chi_squared}")
-    print(f"L_lambda_peak: {L_lambda_peak:.2e} ± {err_L_lambda_peak:.2e} ergs/s/Å")
+    plot_small_z_model(redshifts_small, m_effectives_small, errs_small, popt[0], funct=small_z_model_function)
 
-    bounds = (0, 1)  # ensure parameters are positive
+    bounds = (0, 1)  # ensure omega_Lambda is between 0 and 1
     initial_guess = [0.5]  # initial guess for omega_Lambda
-
     popt, cov = optimize.curve_fit(lambda redshifts, omega_Lambda: all_z_model_function(redshifts, omega_Lambda, L_lambda_peak), redshifts, 
                                    m_effectives, sigma=errs, p0=initial_guess, bounds=bounds)
 
+    omega_Lambda = popt[0]  # no units
+    err_omega_Lambda = np.sqrt(np.diag(cov))[0]  # no units
+
+    chi_squared = all_z_return_chi_squared(redshifts, m_effectives, errs, popt[0], L_lambda_peak)
+    display_result(redshifts, popt, omega_Lambda, err_omega_Lambda, chi_squared, "(no units)", "Omega_Lambda")
 
     plot_all_z_model(redshifts, m_effectives, errs, popt[0], L_lambda_peak, funct=all_z_model_function)
-    print(f"Optimized Omega_Lambda: {popt[0]:.4f} ± {np.sqrt(np.diag(cov))[0]:.4f}")
+
 if __name__ == "__main__":
     main()
