@@ -75,7 +75,7 @@ def small_z_model_function(redshifts: np.ndarray, L_lambda_peak: float) -> np.nd
     :returns: effective magnitudes.
     """
     distances = calculate_distance_small_z(redshifts)  # cm
-    fluxes = L_lambda_peak / (4 * np.pi * distances ** 2)
+    fluxes = L_lambda_peak / (4 * np.pi * distances ** 2 * (1+redshifts)**2)
     m_effectives = -2.5 * np.log10(fluxes / F_LAMBDA_0)
     return m_effectives
 
@@ -240,7 +240,7 @@ def main()-> None:
     omega_Lambda_samples = np.linspace(0, 1, 100)
     reduced_chi_squared_samples = []
     for omega in omega_Lambda_samples:
-        _, reduced_chi_squared = all_z_return_chi_squared(redshifts, m_effectives, errs, omega, L_lambda_peak=L_lambda_peak+err_L_lambda_peak)
+        _, reduced_chi_squared = all_z_return_chi_squared(redshifts, m_effectives, errs, omega, L_lambda_peak)
         reduced_chi_squared_samples.append(reduced_chi_squared)
     plt.figure(figsize=(10, 6))
     plt.plot(omega_Lambda_samples, reduced_chi_squared_samples, color='g')
