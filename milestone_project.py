@@ -16,6 +16,8 @@ KM_PER_MPC = 3.085677581e19  # km/Mpc
 H0_HZ = H0 / KM_PER_MPC  # Hz
 SMALL_Z_THRESHOLD = 0.1  # threshold for small redshift approximation
 F_LAMBDA_0 = 6.61e-9  # erg/s/cm^2/Å
+LABEL_FONT_SIZE = 20  # font size for labels
+LEGEND_FONT_SIZE = 16  # font size for legends
 
 
 def read_data(file_name) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -129,11 +131,11 @@ def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray
                 color='b',
                 label = label + f" = {result}")
 
-    plt.legend(loc="best")
-    plt.ylabel("Effective Magnitude")
-    plt.xlabel("Redshift Factor")
-    plt.title("Effective Magnitude vs. Redshift")
-    plt.savefig(file_name)
+    plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
+    plt.ylabel(rf"Effective Magnitude $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
+    plt.xlabel("Redshift Factor $z$", fontsize=LABEL_FONT_SIZE)
+    #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
+    plt.savefig(file_name, bbox_inches='tight')
     plt.show()
 
 def main()-> None:
@@ -184,14 +186,14 @@ def main()-> None:
         reduced_chi_squared_samples.append(reduced_chi_squared)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(omega_Lambda_samples, reduced_chi_squared_samples, color='g')
-    plt.xlabel("Omega_Lambda")
-    plt.ylabel("Reduced Chi-squared")
-    plt.title("Reduced Chi-squared vs. Omega_Lambda")
-    plt.savefig("reduced_chi_squared_vs_omega_lambda.png")
+    plt.plot(omega_Lambda_samples, reduced_chi_squared_samples, color='b')
+    plt.xlabel(rf"$\Omega_{{\mathrm{{\Lambda}}}}$", fontsize=LABEL_FONT_SIZE)
+    plt.ylabel(rf"Reduced $\chi^2$", fontsize=LABEL_FONT_SIZE)
+    #plt.title("Reduced Chi-squared vs. Omega_Lambda")
+    plt.savefig("reduced_chi_squared_vs_omega_lambda.png", bbox_inches='tight')
     plt.show()
-    
-    print(f"Minimum Reduced Chi-squared: {min(reduced_chi_squared_samples)} at Omega_Lambda = {omega_Lambda_samples[np.argmin(reduced_chi_squared_samples)]}")
+
+    print(rf"Minimum Reduced chi^2: {min(reduced_chi_squared_samples)} at Omega_Lambda = {omega_Lambda_samples[np.argmin(reduced_chi_squared_samples)]}")
 
 if __name__ == "__main__":
     main()
