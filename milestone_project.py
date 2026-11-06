@@ -135,6 +135,7 @@ def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray
     plt.ylabel(rf"Effective Magnitude, $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
     plt.xlabel("Redshift, $z$", fontsize=LABEL_FONT_SIZE)
     #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
+
     plt.savefig(file_name, bbox_inches='tight')
     plt.show()
 
@@ -194,6 +195,34 @@ def main()-> None:
     plt.show()
 
     print(rf"Minimum Reduced chi^2: {min(reduced_chi_squared_samples)} at Omega_Lambda = {omega_Lambda_samples[np.argmin(reduced_chi_squared_samples)]}")
+    one_sigma_range = [omega_Lambda_samples[i] for i in range(len(reduced_chi_squared_samples)) if reduced_chi_squared_samples[i] < min(reduced_chi_squared_samples) + 1]
+    print(rf"1-sigma range for Omega_Lambda: {one_sigma_range[0]} to {one_sigma_range[-1]}")
+
+    
+    result = f"{omega_Lambda:.2f}"
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(redshifts, m_effectives, 
+                yerr=errs, fmt='x', color='black', 
+                capsize=2, markeredgewidth=1)
+
+    smooth_x = np.linspace(np.min(redshifts), np.max(redshifts), 1000)
+    plt.plot(smooth_x, 
+            model_function(smooth_x, L_lambda_peak, omega_Lambda), 
+            color='b',
+            label = label + f" = {result} (no units)")
+
+    plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
+    plt.ylabel(rf"Effective Magnitude, $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
+    plt.xlabel("Redshift, $z$", fontsize=LABEL_FONT_SIZE)
+    #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
+    plt.fill_between(smooth_x, model_function(smooth_x, L_lambda_peak, one_sigma_range[0]), model_function(smooth_x, L_lambda_peak, one_sigma_range[-1]), color='b', alpha=0.5, label="reduced chi^2 < min + 1")
+    plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
+    plt.savefig("m_against_z_alpha.png", bbox_inches='tight')
+    plt.show()
+    
+
+
+    
 
 if __name__ == "__main__":
     main()
