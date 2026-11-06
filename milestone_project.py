@@ -107,7 +107,7 @@ def display_result(result: float, error: float, chi_squared: float, reduced_chi_
     print(f"Reduced Chi-squared: {reduced_chi_squared}")
     
 def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray, 
-                     L_lambda_peak: float, funct: Callable, file_name: str, label: str, omega_Lambda=None) -> None:
+                     L_lambda_peak: float, funct: Callable, file_name: str, label: str, omega_Lambda=None, units=None) -> None:
     """Plot the optimised model from :func:`model_function` against the data.
 
     :param redshifts: redshifts.
@@ -117,7 +117,7 @@ def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray
     :param L_lambda_peak: The peak luminosity per unit wavelength.
     :param funct: The model function to plot.
     """
-    result = f"{L_lambda_peak:.4e}"
+    result = f"{L_lambda_peak:.2e}"
     if omega_Lambda is not None:
         result = f"{omega_Lambda:.2f}"
     plt.figure(figsize=(10, 6))
@@ -129,11 +129,11 @@ def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray
     plt.plot(smooth_x, 
                 funct(smooth_x, L_lambda_peak, omega_Lambda), 
                 color='b',
-                label = label + f" = {result}")
+                label = label + f" = {result} {units if units else ''}")
 
     plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
-    plt.ylabel(rf"Effective Magnitude $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
-    plt.xlabel("Redshift Factor $z$", fontsize=LABEL_FONT_SIZE)
+    plt.ylabel(rf"Effective Magnitude, $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
+    plt.xlabel("Redshift, $z$", fontsize=LABEL_FONT_SIZE)
     #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
     plt.savefig(file_name, bbox_inches='tight')
     plt.show()
@@ -159,7 +159,7 @@ def main()-> None:
     display_result(L_lambda_peak, err_L_lambda_peak, chi_squared, reduced_chi_squared, "ergs/s/Å", "L_λ_peak")
 
     label = rf"Optimised Model: $L_{{\mathrm{{\lambda,peak}}}}$"
-    plot_model(redshifts_small, m_effectives_small, errs_small, L_lambda_peak, funct=model_function, file_name="m_against_z_small.png", label=label)
+    plot_model(redshifts_small, m_effectives_small, errs_small, L_lambda_peak, funct=model_function, file_name="m_against_z_small.png", label=label, units="ergs/s/Å")
 
 
     # optimise omega_Lambda using all redshifts (method 1)
@@ -174,8 +174,8 @@ def main()-> None:
     chi_squared, reduced_chi_squared = return_chi_squared(redshifts, m_effectives, errs, L_lambda_peak, len(popt), omega_Lambda=omega_Lambda)
     display_result(omega_Lambda, err_omega_Lambda, chi_squared, reduced_chi_squared, "(no units)", "Omega_Lambda")
 
-    label = rf"Optimised Model: $\Omega_{{\mathrm{{\Lambda}}}}$"
-    plot_model(redshifts, m_effectives, errs, L_lambda_peak, funct=model_function, file_name="m_against_z.png", label=label, omega_Lambda=omega_Lambda)
+    label = rf"Optimised Model: $\Omega_{{\mathrm{{\Lambda}},0}}$"
+    plot_model(redshifts, m_effectives, errs, L_lambda_peak, funct=model_function, file_name="m_against_z.png", label=label, omega_Lambda=omega_Lambda, units="(no units)")
 
 
     # sampling reduced chi-squared on omega_Lambda to find minimum (method 2)
@@ -187,7 +187,7 @@ def main()-> None:
 
     plt.figure(figsize=(10, 6))
     plt.plot(omega_Lambda_samples, reduced_chi_squared_samples, color='b')
-    plt.xlabel(rf"$\Omega_{{\mathrm{{\Lambda}}}}$", fontsize=LABEL_FONT_SIZE)
+    plt.xlabel(rf"$\Omega_{{\mathrm{{\Lambda}},0}}$", fontsize=LABEL_FONT_SIZE)
     plt.ylabel(rf"Reduced $\chi^2$", fontsize=LABEL_FONT_SIZE)
     #plt.title("Reduced Chi-squared vs. Omega_Lambda")
     plt.savefig("reduced_chi_squared_vs_omega_lambda.png", bbox_inches='tight')
