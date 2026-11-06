@@ -129,14 +129,15 @@ def plot_model(redshifts: np.ndarray, m_effectives: np.ndarray, errs: np.ndarray
     plt.plot(smooth_x, 
                 funct(smooth_x, L_lambda_peak, omega_Lambda), 
                 color='b',
-                label = label + f" = {result} {units if units else ''}")
+                label = label + f" = {result} {units if units else ''}",
+                linewidth=1)
 
     plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
     plt.ylabel(rf"Effective Magnitude, $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
     plt.xlabel("Redshift, $z$", fontsize=LABEL_FONT_SIZE)
     #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
 
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, bbox_inches='tight', dpi=500)
     plt.show()
 
 def main()-> None:
@@ -160,7 +161,7 @@ def main()-> None:
     display_result(L_lambda_peak, err_L_lambda_peak, chi_squared, reduced_chi_squared, "ergs/s/Å", "L_λ_peak")
 
     label = rf"Optimised Model: $L_{{\mathrm{{\lambda,peak}}}}$"
-    plot_model(redshifts_small, m_effectives_small, errs_small, L_lambda_peak, funct=model_function, file_name="m_against_z_small.png", label=label, units="ergs/s/Å")
+    plot_model(redshifts_small, m_effectives_small, errs_small, L_lambda_peak, funct=model_function, file_name="m_against_z_small.png", label=label, units=r"erg s$^{-1}$ Å$^{-1}$")
 
 
     # optimise omega_Lambda using all redshifts (method 1)
@@ -176,14 +177,16 @@ def main()-> None:
     display_result(omega_Lambda, err_omega_Lambda, chi_squared, reduced_chi_squared, "(no units)", "Omega_Lambda")
 
     label = rf"Optimised Model: $\Omega_{{\mathrm{{\Lambda}},0}}$"
-    plot_model(redshifts, m_effectives, errs, L_lambda_peak, funct=model_function, file_name="m_against_z.png", label=label, omega_Lambda=omega_Lambda, units="(no units)")
+    plot_model(redshifts, m_effectives, errs, L_lambda_peak, funct=model_function, file_name="m_against_z.png", label=label, omega_Lambda=omega_Lambda, units=r"(no units)")
 
 
     # sampling reduced chi-squared on omega_Lambda to find minimum (method 2)
     omega_Lambda_samples = np.linspace(0, 1, 100)
     reduced_chi_squared_samples = []
+    chi_squared_samples = []
     for omega in omega_Lambda_samples:
-        _, reduced_chi_squared = return_chi_squared(redshifts, m_effectives, errs, L_lambda_peak, len(popt), omega_Lambda=omega)
+        chi_squared, reduced_chi_squared = return_chi_squared(redshifts, m_effectives, errs, L_lambda_peak, len(popt), omega_Lambda=omega)
+        chi_squared_samples.append(chi_squared)
         reduced_chi_squared_samples.append(reduced_chi_squared)
 
     plt.figure(figsize=(10, 6))
@@ -195,7 +198,7 @@ def main()-> None:
     plt.show()
 
     print(rf"Minimum Reduced chi^2: {min(reduced_chi_squared_samples)} at Omega_Lambda = {omega_Lambda_samples[np.argmin(reduced_chi_squared_samples)]}")
-    one_sigma_range = [omega_Lambda_samples[i] for i in range(len(reduced_chi_squared_samples)) if reduced_chi_squared_samples[i] < min(reduced_chi_squared_samples) + 1]
+    one_sigma_range = [omega_Lambda_samples[i] for i in range(len(chi_squared_samples)) if chi_squared_samples[i] < min(chi_squared_samples) + 1]
     print(rf"1-sigma range for Omega_Lambda: {one_sigma_range[0]} to {one_sigma_range[-1]}")
 
     
@@ -209,15 +212,17 @@ def main()-> None:
     plt.plot(smooth_x, 
             model_function(smooth_x, L_lambda_peak, omega_Lambda), 
             color='b',
-            label = label + f" = {result} (no units)")
+            label = label + f" = {result}", linewidth=1)
 
     plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
     plt.ylabel(rf"Effective Magnitude, $m^{{\mathrm{{eff}}}}$", fontsize=LABEL_FONT_SIZE)
     plt.xlabel("Redshift, $z$", fontsize=LABEL_FONT_SIZE)
     #plt.title("Effective Magnitude vs. Redshift", fontsize=FONT_SIZE)
-    plt.fill_between(smooth_x, model_function(smooth_x, L_lambda_peak, one_sigma_range[0]), model_function(smooth_x, L_lambda_peak, one_sigma_range[-1]), color='b', alpha=0.5, label="reduced chi^2 < min + 1")
+    plt.fill_between(smooth_x, model_function(smooth_x, L_lambda_peak, one_sigma_range[0]), model_function(smooth_x, L_lambda_peak, one_sigma_range[-1]), 
+                     color='red', alpha=0.3, label=r"$\Delta\chi^2 < 1$",
+                     linewidth=0)
     plt.legend(loc="best", fontsize=LEGEND_FONT_SIZE)
-    plt.savefig("m_against_z_alpha.png", bbox_inches='tight')
+    plt.savefig("m_against_z_alpha.png", bbox_inches='tight', dpi=500)
     plt.show()
     
 
